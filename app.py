@@ -142,7 +142,7 @@ user_api_key = st.sidebar.text_input("Google AI Studio Key:", type="password")
 
 if user_api_key:
     genai.configure(api_key=user_api_key)
-    model = genai.GenerativeModel('gemini-1.5-flash-latest')
+    model = genai.GenerativeModel('gemini-1.5-flash')
 else:
     st.sidebar.warning("API Anahtarı Bekleniyor...")
     st.title(T["title"])
@@ -299,4 +299,5 @@ if st.session_state.generated_images:
                         st.video("https://www.w3schools.com/html/mov_bbb.mp4")
                 else:
                     st.warning("Lütfen bir talimat yazınız.")
+
 
