@@ -1,3 +1,4 @@
+# Sistem guncellemesi
 import streamlit as st
 import google.generativeai as genai
 from PIL import Image
@@ -299,5 +300,6 @@ if st.session_state.generated_images:
                         st.video("https://www.w3schools.com/html/mov_bbb.mp4")
                 else:
                     st.warning("Lütfen bir talimat yazınız.")
+
 
 
