@@ -109,7 +109,7 @@ with col2:
                 genai.configure(api_key=api_key)
                 
                 # Model Seçimi (En garantisi flash modelidir)
-                model = genai.GenerativeModel('gemini-1.5-pro')
+                model = genai.GenerativeModel('gemini-pro')
                 
                 with st.spinner("Model hazırlanıyor, ışıklar ayarlanıyor..."):
                     # Prompt Mantığı
@@ -136,5 +136,6 @@ with col2:
         st.info("Lütfen önce bir fotoğraf yükleyin.")
     elif not api_key:
         st.error("Lütfen sol menüden API Anahtarınızı girin.")
+
 
 
