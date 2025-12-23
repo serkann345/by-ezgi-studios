@@ -64,6 +64,12 @@ st.markdown("""
     section[data-testid="stSidebar"] h1, section[data-testid="stSidebar"] label {
         color: #333333 !important;
     }
+    
+    /* HATA MESAJI KUTUSU */
+    .stAlert {
+        background-color: #ffe6e6;
+        border: 1px solid #ff0000;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -109,24 +115,41 @@ languages = {
     }
 }
 
-# --- AYARLAR ---
+# --- YAN MENÜ: GÜVENLİK VE GİRİŞ ---
+st.sidebar.title("🔐 Güvenlik / Security")
+
+# 1. AŞAMA: UYGULAMA ŞİFRESİ (GATEKEEPER)
+app_password = st.sidebar.text_input("🔑 Stüdyo Şifresi / Password", type="password")
+
+# Şifre yanlışsa veya boşsa uygulamayı DURDUR
+if app_password != "EZGIVIP":  # BURADAKİ ŞİFREYİ İSTEDİĞİN GİBİ DEĞİŞTİREBİLİRSİN
+    st.sidebar.warning("Lütfen giriş şifresini giriniz.")
+    st.title("🔒 KİLİTLİ / LOCKED")
+    st.error("Bu stüdyo özel davetle çalışmaktadır. Erişim sağlamak için lütfen yöneticiden şifre talep ediniz.")
+    st.stop()  # KOD BURADA DURUR, AŞAĞIYA GEÇMEZ
+
+# 2. AŞAMA: DİL SEÇİMİ
+st.sidebar.divider()
 st.sidebar.title("🌐 Language / Dil")
 selected_lang = st.sidebar.selectbox("", ["Türkçe", "English"])
 T = languages[selected_lang]
 
+# 3. AŞAMA: API KEY GİRİŞİ (KOTA İÇİN)
 st.sidebar.divider()
-st.sidebar.title("🔐 Studio Key")
-st.sidebar.info("Uygulamayı kullanmak için kendi Google AI Studio anahtarınızı giriniz.")
-user_api_key = st.sidebar.text_input("Google AI API Key:", type="password")
+st.sidebar.title("💳 API Key")
+st.sidebar.info("Kendi kotanızı kullanmak için Google AI anahtarınızı giriniz.")
+user_api_key = st.sidebar.text_input("Google AI Studio Key:", type="password")
 
 if user_api_key:
     genai.configure(api_key=user_api_key)
     model = genai.GenerativeModel('gemini-1.5-flash')
 else:
-    st.sidebar.warning("Giriş Anahtarı Bekleniyor...")
+    st.sidebar.warning("API Anahtarı Bekleniyor...")
+    st.title(T["title"])
+    st.warning("⚠️ Devam etmek için lütfen sol menüden API Anahtarınızı giriniz.")
     st.stop()
 
-# --- ANA EKRAN ---
+# --- ANA EKRAN (SADECE ŞİFRE VE API KEY GİRİLİNCE AÇILIR) ---
 st.title(T["title"])
 st.markdown(f"<h3 style='text-align: center;'>{T['subtitle']}</h3>", unsafe_allow_html=True)
 st.write("") 
