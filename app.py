@@ -1,311 +1,138 @@
-# Sistem guncellemesi
 import streamlit as st
 import google.generativeai as genai
 from PIL import Image
-import time
 
-# --- SAYFA VE MARKA AYARLARI ---
-st.set_page_config(page_title="By Ezgi Studios", page_icon="🌿", layout="wide")
+# ---------------------------------------------------------
+# 1. AYARLAR VE TASARIM
+# ---------------------------------------------------------
+st.set_page_config(layout="wide", page_title="By Ezgi Studios", page_icon="🌿")
 
-# --- TASARIM (BEJ & LAWN GREEN) ---
+# Özel CSS Tasarımı (Bej Rengi ve Fontlar)
 st.markdown("""
 <style>
-    /* 1. ANA ARKA PLAN: BEJ */
     .stApp {
-        background-color: #F5F5DC;
-        color: #333333;
+        background-color: #f5f5dc;
     }
-
-    /* 2. BAŞLIKLAR */
-    h1 {
-        color: #2E8B57 !important;
+    .main-header {
         font-family: 'Helvetica Neue', sans-serif;
+        color: #4a4a4a;
         text-align: center;
-        padding-bottom: 10px;
-    }
-    
-    h2, h3, p, label, .stMarkdown, .stRadio label {
-        color: #333333 !important;
-        font-weight: 500;
-    }
-
-    /* 3. BUTONLAR: LAWN YEŞİLİ */
-    div.stButton > button { 
-        background-color: #7CFC00; 
-        color: #006400; 
-        border: 2px solid #32CD32;
-        border-radius: 12px; 
-        height: 55px; 
-        width: 100%;
-        font-size: 18px;
         font-weight: bold;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        transition: all 0.3s ease;
     }
-    div.stButton > button:hover {
-        background-color: #32CD32;
+    .stButton>button {
+        background-color: #8b5a2b;
         color: white;
-        transform: translateY(-2px);
+        border-radius: 20px;
+        width: 100%;
+        border: none;
     }
-    
-    /* 4. GÖRSEL ÇERÇEVELERİ */
-    .stImage > img {
-        border: 4px solid #7CFC00;
-        border-radius: 15px; 
-        transition: transform 0.3s; 
-        box-shadow: 0 5px 15px rgba(0,0,0,0.1); 
+    .stButton>button:hover {
+        background-color: #6d4621;
     }
-    .stImage > img:hover { transform: scale(1.03); z-index: 10; }
-
-    /* 5. SIDEBAR */
-    section[data-testid="stSidebar"] {
-        background-color: #FFFFFF;
-        border-right: 1px solid #ddd;
-    }
-    section[data-testid="stSidebar"] h1, section[data-testid="stSidebar"] label {
-        color: #333333 !important;
-    }
-    
-    /* HATA MESAJI KUTUSU */
-    .stAlert {
+    .locked-box {
+        border: 2px solid #ff4b4b;
+        padding: 20px;
+        border-radius: 10px;
         background-color: #ffe6e6;
-        border: 1px solid #ff0000;
+        text-align: center;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# --- DİL SÖZLÜĞÜ ---
-languages = {
-    "Türkçe": {
-        "title": "🌿 By Ezgi Studios 🌿",
-        "subtitle": "AI Destekli Natural & Profesyonel Moda Stüdyosu",
-        "sector_label": "Çekim Sektörünü Seçiniz:",
-        "sectors": ["Aksesuar (Jewelry/Watch)", "Gelinlik (Wedding)", "Abiye (Evening)", "Günlük Giyim (Casual)", "Çanta (Bags)", "Ayakkabı (Shoes)"], 
-        "upload_label": " Referans Fotoğrafı",
-        "button_start": "✦ Çekimi Başlat ✦",
-        "model_design": "👤 Model Seçimi",
-        "bg_label": "Arka Plan Konsepti",
-        "vid_title": "🎬 By Ezgi Video Production",
-        "vid_select": "Videoya dönüştürülecek pozu seçin:",
-        "vid_motion_label": "A) Hazır Hareket Seçimi:",
-        "vid_custom_label": "B) Özel Hareket Talimatı (İsteğe Bağlı):",
-        "vid_custom_placeholder": "Örn: Saçlar hafifçe rüzgarda uçuşsun, kamera yavaşça yüze yaklaşsın...",
-        "btn_preset": "🎬 Seçili Hareketi Uygula",
-        "btn_custom": "✨ Özel Talimatı Uygula",
-        "vid_success": "By Ezgi Studios prodüksiyonu tamamlandı!",
-        "motions": ["Podyum Yürüyüşü", "360 Derece Dönüş", "Hafif Rüzgar/Dalgalanma", "Sinematik Zoom"]
-    },
-    "English": {
-        "title": "🌿 By Ezgi Studios 🌿",
-        "subtitle": "AI Powered Natural & Professional Fashion Hub",
-        "sector_label": "Select Shooting Sector:",
-        "sectors": ["Accessories", "Wedding Dress", "Evening Wear", "Casual Wear", "Bags", "Shoes"],
-        "upload_label": " Reference Photo",
-        "button_start": "✦ Start Shoot ✦",
-        "model_design": "👤 Model Selection",
-        "bg_label": "Background Concept",
-        "vid_title": "🎬 By Ezgi Video Production",
-        "vid_select": "Select pose to animate:",
-        "vid_motion_label": "A) Select Preset Motion:",
-        "vid_custom_label": "B) Custom Motion Instruction (Optional):",
-        "vid_custom_placeholder": "E.g., Hair blowing in wind, slow zoom to face...",
-        "btn_preset": "🎬 Apply Preset Motion",
-        "btn_custom": "✨ Apply Custom Instruction",
-        "vid_success": "By Ezgi Studios production completed!",
-        "motions": ["Runway Walk", "360 Spin", "Wind/Fabric Detail", "Cinematic Zoom"]
-    }
-}
+# ---------------------------------------------------------
+# 2. GÜVENLİK SİSTEMİ (EZGIVIP)
+# ---------------------------------------------------------
+if 'authenticated' not in st.session_state:
+    st.session_state.authenticated = False
 
-# --- YAN MENÜ: GÜVENLİK VE GİRİŞ ---
-st.sidebar.title("🔐 Güvenlik / Security")
+def check_password():
+    password = st.sidebar.text_input("🔑 Stüdyo Şifresi / Password", type="password")
+    if password == 'EZGIVIP':
+        st.session_state.authenticated = True
+        st.rerun()
+    elif password:
+        st.sidebar.error("Hatalı Şifre!")
 
-# 1. AŞAMA: UYGULAMA ŞİFRESİ (GATEKEEPER)
-app_password = st.sidebar.text_input("🔑 Stüdyo Şifresi / Password", type="password")
+# Eğer giriş yapılmadıysa KİLİTLİ EKRANI göster
+if not st.session_state.authenticated:
+    st.markdown("<h1 style='text-align: center; color: #d32f2f;'>🔒 KİLİTLİ / LOCKED</h1>", unsafe_allow_html=True)
+    st.markdown("""
+        <div class='locked-box'>
+            <h3>Bu stüdyo özel davetle çalışmaktadır.</h3>
+            <p>Erişim sağlamak için lütfen sol menüden şifre giriniz.</p>
+        </div>
+    """, unsafe_allow_html=True)
+    check_password()
+    st.stop()  # Uygulamanın geri kalanını durdur
 
-# Şifre yanlışsa veya boşsa uygulamayı DURDUR
-if app_password != "EZGIVIP":  # BURADAKİ ŞİFREYİ İSTEDİĞİN GİBİ DEĞİŞTİREBİLİRSİN
-    st.sidebar.warning("Lütfen giriş şifresini giriniz.")
-    st.title("🔒 KİLİTLİ / LOCKED")
-    st.error("Bu stüdyo özel davetle çalışmaktadır. Erişim sağlamak için lütfen yöneticiden şifre talep ediniz.")
-    st.stop()  # KOD BURADA DURUR, AŞAĞIYA GEÇMEZ
+# ---------------------------------------------------------
+# 3. ANA UYGULAMA (Giriş Yapıldıysa Burası Çalışır)
+# ---------------------------------------------------------
 
-# 2. AŞAMA: DİL SEÇİMİ
-st.sidebar.divider()
-st.sidebar.title("🌐 Language / Dil")
-selected_lang = st.sidebar.selectbox("", ["Türkçe", "English"])
-T = languages[selected_lang]
-
-# 3. AŞAMA: API KEY GİRİŞİ (KOTA İÇİN)
-st.sidebar.divider()
-st.sidebar.title("💳 API Key")
-st.sidebar.info("Kendi kotanızı kullanmak için Google AI anahtarınızı giriniz.")
-user_api_key = st.sidebar.text_input("Google AI Studio Key:", type="password")
-
-if user_api_key:
-  genai.configure(api_key=api_key)
-  model = genai.GenerativeModel('models/gemini-1.5-flash')
-else:
-    st.sidebar.warning("API Anahtarı Bekleniyor...")
-    st.title(T["title"])
-    st.warning("⚠️ Devam etmek için lütfen sol menüden API Anahtarınızı giriniz.")
-    st.stop()
-
-# --- ANA EKRAN (SADECE ŞİFRE VE API KEY GİRİLİNCE AÇILIR) ---
-st.title(T["title"])
-st.markdown(f"<h3 style='text-align: center;'>{T['subtitle']}</h3>", unsafe_allow_html=True)
-st.write("") 
-
-if 'generated_images' not in st.session_state:
-    st.session_state.generated_images = []
-
-# --- SOL PANEL: RESİM ÜRETİMİ ---
-with st.container():
-    sektor = st.selectbox(T["sector_label"], T["sectors"])
+# Sol Menü Ayarları
+with st.sidebar:
+    st.success("✅ Giriş Başarılı / Logged In")
     st.markdown("---")
-
-    col1, col2 = st.columns(2)
-    with col1:
-        urun_file = st.file_uploader(f"{sektor} {T['upload_label']}", type=['jpg', 'png', 'jpeg'])
-        if urun_file: st.image(urun_file, width=250)
-
-    with col2:
-        is_shoes = "Ayakkabı" in sektor or "Shoes" in sektor
-        karakter_tipi = "AI"
-        char_file = None
-        
-        if not is_shoes:
-            karakter_tipi = st.radio(T["model_design"], ["AI Oluştursun", "Kendi Modelimi Yükle"])
-            if karakter_tipi == "AI Oluştursun":
-                 c1, c2 = st.columns(2)
-                 with c1:
-                     ethnic = st.selectbox("Köken", ["Avrupalı", "Asyalı", "Latin", "Afrikalı"])
-                 with c2:
-                     gender = st.selectbox("Cinsiyet", ["Kadın", "Erkek"])
-            else:
-                char_file = st.file_uploader("Model Fotoğrafı", type=['jpg', 'png'])
-
-    st.markdown("---")
-    arka_plan = st.selectbox(T["bg_label"], ["Stüdyo (Beyaz)", "Bej Minimal", "Doğa/Garden", "Lüks Salon", "Sokak/Street"])
-
-    st.write("")
-    if st.button(T["button_start"]):
-        if urun_file:
-            with st.spinner("By Ezgi Studios: Görüntüler İşleniyor..."):
-                
-                input_images = [Image.open(urun_file)]
-                if char_file: input_images.append(Image.open(char_file))
-
-                # --- PROMPT MANTIĞI ---
-                
-                # 1. AYAKKABI
-                if is_shoes:
-                    prompt_logic = f"""
-                    TASK: Professional Shoe Photography.
-                    Action: Place the shoe on a professional surface suitable for {arka_plan}.
-                    Angles: Side profile, Top view, Back detail, Angled.
-                    NO FACES. Product Focus only.
-                    """
-                
-                # 2. SADECE AKSESUAR (KATI KORUMA)
-                elif "Aksesuar" in sektor or "Accessories" in sektor:
-                     if karakter_tipi == "AI Oluştursun":
-                        target_model = f"{ethnic} kökenli, {gender} model."
-                     else:
-                        target_model = "Referans görseldeki kişinin kimliğini koru."
-
-                     prompt_logic = f"""
-                     GÖREV: Ultra-Gerçekçi Ürün Yerleştirme.
-                     MODEL: {target_model}
-                     [KRİTİK: AKSESUAR KORUMA]
-                     Referans görseldeki takıyı (Kolye/Saat/Küpe) al ve modelin üzerine yerleştir.
-                     KURALLAR:
-                     1. GEOMETRİ KİLİDİ: Ürünün şeklini, boyutunu ASLA değiştirme.
-                     2. DOKU KİLİDİ: Metal rengi ve taşlar %100 aynı kalmalı.
-                     3. YARATICILIK YASAK: Olduğu gibi kopyala.
-                     SAHNE: {arka_plan}. ODAK: Close-up.
-                     """
-
-                # 3. GELİNLİK/ABİYE (KIYAFET KORUMALI)
-                else:
-                    if karakter_tipi == "AI Oluştursun":
-                        target_model = f"{ethnic} kökenli {gender} model."
-                    else:
-                        target_model = "Referans görseldeki kişinin yüzünü koru."
-
-                    prompt_logic = f"""
-                    GÖREV: {target_model} referans kıyafeti giyiyor.
-                    [1. KIYAFET KİLİDİ]
-                    Kumaş dokusu, desen, dikişler, iplik izleri, boncuklar %100 aynı kalıyor.
-                    [2. AKSESUAR KİLİDİ]
-                    Modelin üzerindeki mevcut aksesuarlara (Taç, Duvak, Kolye) dokunma, çıkarma veya değiştirme.
-                    SAHNE: {arka_plan}
-                    """
-
-                # API Çağrısı
-                response = model.generate_content([prompt_logic] + input_images)
-                
-                # Demo Sonuçlar
-                st.session_state.generated_images = [
-                    "https://via.placeholder.com/600x800?text=By+Ezgi+Poz+1",
-                    "https://via.placeholder.com/600x800?text=By+Ezgi+Poz+2",
-                    "https://via.placeholder.com/600x800?text=By+Ezgi+Poz+3",
-                    "https://via.placeholder.com/600x800?text=By+Ezgi+Poz+4"
-                ]
-                st.success("Çekim Tamamlandı! Aşağıdan Video Prodüksiyonuna geçebilirsiniz.")
-
-# --- VİDEO BÖLÜMÜ ---
-if st.session_state.generated_images:
-    st.markdown("---")
-    st.markdown(f"<h2 style='text-align: center; color: #2E8B57;'>{T['vid_title']}</h2>", unsafe_allow_html=True)
     
-    cols = st.columns(4)
-    for i, img in enumerate(st.session_state.generated_images):
-        with cols[i]:
-            st.image(img, caption=f"Poz {i+1}")
-
-    st.write("")
+    # --- API KEY GİRİŞİ (HATAYI ÇÖZEN KISIM) ---
+    api_key = st.text_input("Google AI Studio Key:", type="password", help="aistudio.google.com adresinden alacağınız AIza ile başlayan anahtar.")
     
-    video_container = st.container()
-    with video_container:
-        v1, v2 = st.columns([1, 1])
+    if not api_key:
+        st.warning("⚠️ Lütfen kullanmak için Google API Anahtarınızı girin.")
+
+# Ana Başlık
+st.markdown("<h1 class='main-header'>🌿 By Ezgi Studios 🌿</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center;'>AI Destekli Profesyonel Moda & Prodüksiyon Stüdyosu</p>", unsafe_allow_html=True)
+st.markdown("---")
+
+# İki Sütunlu Yapı
+col1, col2 = st.columns([1, 1])
+
+with col1:
+    st.subheader("1. Ayarlarınızı Yapın")
+    sector = st.selectbox("Sektör Seçimi:", ["Aksesuar", "Gelinlik", "Abiye", "Günlük Giyim", "Ayakkabı"])
+    model_type = st.selectbox("Model Tipi:", ["Türk Tesettürlü Model", "Avrupalı Model", "Asyalı Model", "Siyahi Model"])
+    uploaded_file = st.file_uploader("Ürün/Kıyafet Fotoğrafı Yükle", type=["jpg", "png", "jpeg"])
+
+with col2:
+    st.subheader("2. Stüdyo Sonucu")
+    
+    if uploaded_file and api_key:
+        # Resmi Göster
+        image = Image.open(uploaded_file)
+        st.image(image, caption="Yüklenen Tasarım", use_container_width=True)
         
-        with v1:
-            st.info("1. Ayarlar / Settings")
-            selected_index = st.selectbox(T["vid_select"], range(1, len(st.session_state.generated_images)+1))
-            source_image = st.session_state.generated_images[selected_index-1]
-            
-            preset_motion = st.selectbox(T["vid_motion_label"], T["motions"])
-            custom_text = st.text_area(T["vid_custom_label"], placeholder=T["vid_custom_placeholder"])
-
-        with v2:
-            st.info("2. Motor / Action")
-            
-            lighting_guard = "CRITICAL: DO NOT add extra lights. Preserve source lighting 100%. No brightening filters."
-            
-            if st.button(T["btn_preset"]):
-                with st.spinner("By Ezgi Studios: Video Render Alınıyor..."):
-                    final_video_prompt = f"Action: {preset_motion}. {lighting_guard}"
-                    time.sleep(3)
-                    st.success(f"{T['vid_success']}")
-                    st.video("https://www.w3schools.com/html/mov_bbb.mp4")
-            
-            st.write("")
-            
-            if st.button(T["btn_custom"]):
-                if custom_text:
-                    with st.spinner("By Ezgi Studios: Özel Video İşleniyor..."):
-                        final_video_prompt = f"Action: {custom_text}. {lighting_guard}"
-                        time.sleep(3)
-                        st.success(f"{T['vid_success']}")
-                        st.video("https://www.w3schools.com/html/mov_bbb.mp4")
-                else:
-                    st.warning("Lütfen bir talimat yazınız.")
-
-
-
-
-
-
-
-
-
+        # Buton
+        if st.button("✨ Çekimi Başlat (Generate)"):
+            try:
+                # Modeli Yapılandır
+                genai.configure(api_key=api_key)
+                
+                # Model Seçimi (En garantisi flash modelidir)
+                model = genai.GenerativeModel('gemini-1.5-flash')
+                
+                with st.spinner("Model hazırlanıyor, ışıklar ayarlanıyor..."):
+                    # Prompt Mantığı
+                    prompt = f"""
+                    Sen profesyonel bir moda fotoğrafçısısın.
+                    Bu görseldeki ürünü al ve {model_type} üzerinde, {sector} konseptine uygun olarak
+                    ultra gerçekçi, sinematik ışıklandırma ile yeniden hayal et.
+                    Yüz hatları net olsun. 8k çözünürlük, moda dergisi kapağı kalitesinde olsun.
+                    """
+                    
+                    # Üretim
+                    response = model.generate_content([prompt, image])
+                    st.image(response.text, caption="Oluşturulan Görsel (Not: Metin tabanlı model görsel linki veremeyebilir, görsel yeteneği için Pro sürüm gerekebilir)", use_container_width=True)
+                    
+                    # Eğer görsel gelmezse metin çıktısını yazdır (Hata ayıklama için)
+                    st.write(response.text)
+                    
+                    st.success("Çekim Tamamlandı!")
+            except Exception as e:
+                st.error(f"Bir hata oluştu: {e}")
+                st.info("İpucu: API Key'inizin doğru olduğundan ve başında/sonunda boşluk olmadığından emin olun.")
+                
+    elif not uploaded_file:
+        st.info("Lütfen önce bir fotoğraf yükleyin.")
+    elif not api_key:
+        st.error("Lütfen sol menüden API Anahtarınızı girin.")
